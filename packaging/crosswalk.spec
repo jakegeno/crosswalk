@@ -180,6 +180,11 @@ GYP_EXTRA_FLAGS="${GYP_EXTRA_FLAGS} -Ddisable_fatal_linker_warnings=1"
 # https://review.tizen.org/gerrit/#/c/24336/
 GYP_EXTRA_FLAGS="${GYP_EXTRA_FLAGS} -Duse_alsa=0"
 
+# Temporarily disable WebRTC support because its build currently hardcodes
+# dependencies on X11 and OpenSSL. We are still trying to get some
+# clarifications as to whether this is really necessary. See XWALK-2160.
+GYP_EXTRA_FLAGS="${GYP_EXTRA_FLAGS} -Denable_webrtc=0"
+
 # For building for arm in OBS, we need :
 # -> to unset sysroot value.
 # sysroot variable is automatically set for cross compilation to use arm-sysroot provided by Chromium project
