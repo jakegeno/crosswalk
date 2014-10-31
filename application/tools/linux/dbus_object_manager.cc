@@ -36,23 +36,29 @@ DBusObjectManager::DBusObjectManager(dbus::Bus* bus,
 }
 
 bool DBusObjectManager::Launch(const std::string& appid_or_url,
-     int launcher_pid, bool fullscreen, bool remote_debugging) {
+     int launcher_pid, bool fullscreen, bool remote_debugging,
+     char* encoded_bundle) {
   if (!running_proxy_)
     return false;
+  std::string method = "Launch";
+  if (encoded_bundle)
+    method = "LaunchAppControl";
   dbus::MethodCall method_call(
-      kRunningManagerIface, "Launch");
+      kRunningManagerIface, method.c_str());
   dbus::MessageWriter writer(&method_call);
   writer.AppendString(appid_or_url);
   writer.AppendUint32(launcher_pid);
   writer.AppendBool(fullscreen);
   writer.AppendBool(remote_debugging);
+  if (encoded_bundle)
+    writer.AppendString(encoded_bundle);
   scoped_ptr<dbus::Response> response(
       running_proxy_->CallMethodAndBlock(&method_call,
       dbus::ObjectProxy::TIMEOUT_USE_DEFAULT));
   if (!response.get())
     return false;
   if (!response->GetErrorName().empty()) {
-    LOG(ERROR) << "Error during call to 'Launch': "
+    LOG(ERROR) << "Error during call to '" << method <<"': "
                << response->GetErrorName();
     return false;
   }

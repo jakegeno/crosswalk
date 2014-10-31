@@ -36,6 +36,9 @@ class RunningApplicationObject : public dbus::ManagedObject {
   virtual ~RunningApplicationObject();
 
   void ExtensionProcessCreated(const IPC::ChannelHandle& handle);
+#if defined(OS_TIZEN)
+  void SaveEncodedBundle(const std::string& encoded_bundle);
+#endif
 
  private:
   void TerminateApplication();
@@ -66,6 +69,9 @@ class RunningApplicationObject : public dbus::ManagedObject {
 
   void SetUserAgentStringOnIOThread(const std::string& user_agent_string);
   void OnSetUserAgentString(dbus::MethodCall* method_call,
+                   dbus::ExportedObject::ResponseSender response_sender);
+
+  void OnGetEncodedBundle(dbus::MethodCall* method_call,
                    dbus::ExportedObject::ResponseSender response_sender);
 #endif
 

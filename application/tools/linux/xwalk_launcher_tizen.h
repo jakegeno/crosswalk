@@ -39,12 +39,21 @@ class XWalkLauncherTizen : public XWalkLauncher {
   bool Suspend();
   bool Resume();
 
+ protected:
+  int LaunchAppControl(char* encoded_bundle);
  private:
   static void application_event_cb(app_event event, void* data, bundle* b);
+  bool IsAppControlLaunch(const char* operation, const char* mime,
+                          const char* uri);
+  void ParseBundleData(bundle* b, char** out_operation, char** out_mime,
+                       char** out_uri);
+  void EncodeBundle(bundle* b, bundle_raw** out_bundle, int* len);
   int XwalkAppcoreInit(const std::string& name, int argc, char* argv[]);
   int XwalkChangeCmdline(const std::string& app_id, int argc, char* argv[]);
 
-  base::MessageLoop* main_loop_;
+  char* operation;
+  char* mime;
+  char* uri;
 };
 
 #endif  // XWALK_APPLICATION_TOOLS_LINUX_XWALK_LAUNCHER_TIZEN_H_

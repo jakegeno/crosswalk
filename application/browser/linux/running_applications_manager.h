@@ -36,9 +36,18 @@ class RunningApplicationsManager : public ApplicationService::Observer {
   RunningApplicationObject* GetRunningApp(const std::string& app_id);
 
  private:
+  bool ParseLaunchCallArgs(dbus::MethodCall* method_call,
+      dbus::ExportedObject::ResponseSender* response_sender,
+      std::string* app_id_or_url, unsigned int* launcher_pid, bool* fullscreen,
+      bool* remote_debugging, std::string* encoded_bundle = nullptr);
+
   // org.crosswalkproject.Running.Manager1 interface.
   void OnLaunch(dbus::MethodCall* method_call,
                 dbus::ExportedObject::ResponseSender response_sender);
+#if defined(OS_TIZEN)
+  void OnLaunchAppControl(dbus::MethodCall* method_call,
+      dbus::ExportedObject::ResponseSender response_sender);
+#endif
   void OnTerminateIfRunning(dbus::MethodCall* method_call,
       dbus::ExportedObject::ResponseSender response_sender);
 

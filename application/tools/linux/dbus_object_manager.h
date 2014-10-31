@@ -34,7 +34,8 @@ class DBusObjectManager : public dbus::ObjectManager::Interface {
   DBusObjectManager(dbus::Bus* bus, base::MessageLoop* main_loop);
 
   bool Launch(const std::string& appid_or_url, int launcher_pid,
-              bool fullscreen, bool remote_debugging);
+              bool fullscreen, bool remote_debugging,
+              char* encoded_bundle = nullptr);
   std::pair<std::string, int> GetEPChannel() const;
   bool Suspend();
   bool Resume();

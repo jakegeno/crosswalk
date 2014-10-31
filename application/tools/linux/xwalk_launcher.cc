@@ -68,13 +68,17 @@ int XWalkLauncher::Launch(const std::string& appid_or_url, bool fullscreen,
   return !LaunchApplication();
 }
 
-int XWalkLauncher::LaunchApplication() {
+int XWalkLauncher::LaunchApplication(char* encoded_bundle) {
   ep_launcher_.reset(new XWalkExtensionProcessLauncher());
 
   launcher_pid_ = getpid();
-  if (!dbus_object_manager_->Launch(appid_or_url_, launcher_pid_,
-                                    fullscreen_, remote_debugging_))
-    return 1;
+  if (encoded_bundle != nullptr || !strcmp(encoded_bundle, ""))
+    if (!dbus_object_manager_->Launch(appid_or_url_, launcher_pid_,
+             fullscreen_, remote_debugging_))
+      return 1;
+  else
+    if (!dbus_object_manager_->Launch(appid_or_url_, launcher_pid_,
+             fullscreen_, remote_debugging_, encoded_bundle))
   return InitExtensionProcessChannel();
 }
 

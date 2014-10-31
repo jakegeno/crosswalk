@@ -110,6 +110,9 @@ class Application : public Runtime::Observer,
                      StoredPermission perm);
   bool CanRequestURL(const GURL& url) const;
 
+  void SaveEncodedBundle(const std::string& encoded_bundle);
+  std::string GetEncodedBundle();
+
   void set_observer(Observer* observer) { observer_ = observer; }
 
   base::WeakPtr<Application> GetWeakPtr() {
@@ -180,6 +183,8 @@ class Application : public Runtime::Observer,
   bool remote_debugging_enabled_;
   // WeakPtrFactory should be always declared the last.
   base::WeakPtrFactory<Application> weak_factory_;
+
+  std::string encoded_bundle_;
   DISALLOW_COPY_AND_ASSIGN(Application);
 };
 

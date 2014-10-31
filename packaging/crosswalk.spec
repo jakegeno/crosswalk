@@ -57,6 +57,8 @@ BuildRequires:  yasm
 BuildRequires:  pkgconfig(ail)
 BuildRequires:  pkgconfig(alsa)
 BuildRequires:  pkgconfig(appcore-common)
+BuildRequires:  pkgconfig(appsvc)
+BuildRequires:  pkgconfig(bundle)
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(capi-location-manager)
 BuildRequires:  pkgconfig(dbus-1)

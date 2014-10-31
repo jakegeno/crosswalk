@@ -25,7 +25,7 @@ class XWalkLauncher : public DBusObjectManager::Observer {
                      char* argv[] = nullptr);
 
  protected:
-  int LaunchApplication();
+  int LaunchApplication(char* encoded_bundle = nullptr);
 
   std::unique_ptr<XWalkExtensionProcessLauncher> ep_launcher_;
 

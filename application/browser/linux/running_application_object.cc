@@ -110,6 +110,14 @@ RunningApplicationObject::RunningApplicationObject(
                  base::Unretained(this)),
       base::Bind(&RunningApplicationObject::OnExported,
                  base::Unretained(this)));
+
+  // This method is for AppControl extension
+  dbus_object()->ExportMethod(
+      kRunningApplicationDBusInterface, "GetEncodedBundle",
+      base::Bind(&RunningApplicationObject::OnGetEncodedBundle,
+                 base::Unretained(this)),
+      base::Bind(&RunningApplicationObject::OnExported,
+                 base::Unretained(this)));
 #endif
 }
 
@@ -274,6 +282,37 @@ void RunningApplicationObject::OnSetUserAgentString(
                                             "Wrong user agent string");
     response_sender.Run(error_response.PassAs<dbus::Response>());
   }
+}
+
+void RunningApplicationObject::OnGetEncodedBundle(dbus::MethodCall* method_call,
+    dbus::ExportedObject::ResponseSender response_sender) {
+  if (application_->GetEncodedBundle().empty()) {
+    scoped_ptr<dbus::ErrorResponse> error_response =
+        dbus::ErrorResponse::FromMethodCall(method_call,
+                                            kRunningApplicationDBusError,
+                                            "Encoded bundle is empty");
+    response_sender.Run(error_response.PassAs<dbus::Response>());
+  } else {
+    scoped_ptr<dbus::Response> response =
+        dbus::Response::FromMethodCall(method_call);
+    dbus::MessageWriter writer(response.get());
+
+    // Receiving encoded bundle:
+    // GVariant* result = g_dbus_proxy_call_sync(bla, bla);
+    // if (result) {
+    //   if (g_variant_is_of_type(result, G_VARIANT_TYPE ("(s)"))) {
+    //     std::string enc_bundle;
+    //     g_variant_get (result, "(s)", &enc_bundle);
+    //   }
+    // }
+    writer.AppendString(application_->GetEncodedBundle());
+    response_sender.Run(response.Pass());
+  }
+}
+
+void RunningApplicationObject::SaveEncodedBundle(
+    const std::string& encoded_bundle) {
+  application_->SaveEncodedBundle(encoded_bundle);
 }
 #endif
 

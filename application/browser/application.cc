@@ -421,6 +421,14 @@ bool Application::CanRequestURL(const GURL& url) const {
   return true;
 }
 
+void Application::SaveEncodedBundle(const std::string& encoded_bundle) {
+  encoded_bundle_ = std::string(encoded_bundle);
+}
+
+std::string Application::GetEncodedBundle() {
+    return encoded_bundle_;
+}
+
 base::FilePath Application::GetSplashScreenPath() {
   return base::FilePath();
 }

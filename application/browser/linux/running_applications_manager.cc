@@ -77,6 +77,15 @@ RunningApplicationsManager::RunningApplicationsManager(
       base::Bind(&RunningApplicationsManager::OnExported,
                  weak_factory_.GetWeakPtr()));
 
+#if defined(OS_TIZEN)
+  adaptor_.manager_object()->ExportMethod(
+      kRunningManagerDBusInterface, "LaunchAppControl",
+      base::Bind(&RunningApplicationsManager::OnLaunchAppControl,
+                 weak_factory_.GetWeakPtr()),
+      base::Bind(&RunningApplicationsManager::OnExported,
+                 weak_factory_.GetWeakPtr()));
+#endif
+
   adaptor_.manager_object()->ExportMethod(
       kRunningManagerDBusInterface, "TerminateIfRunning",
       base::Bind(&RunningApplicationsManager::OnTerminateIfRunning,
@@ -134,32 +143,42 @@ void RunningApplicationsManager::OnRemoteDebuggingEnabled(
   response_sender.Run(response.Pass());
 }
 
-void RunningApplicationsManager::OnLaunch(
+bool RunningApplicationsManager::ParseLaunchCallArgs(
     dbus::MethodCall* method_call,
-    dbus::ExportedObject::ResponseSender response_sender) {
-
+    dbus::ExportedObject::ResponseSender* response_sender,
+    std::string* app_id_or_url, unsigned int* launcher_pid, bool* fullscreen,
+    bool* remote_debugging, std::string* encoded_bundle) {
   dbus::MessageReader reader(method_call);
-  std::string app_id_or_url;
-  // We might want to pass key-value pairs if have more parameters in future.
-  unsigned int launcher_pid;
-  bool fullscreen;
-  bool remote_debugging;
 
-  if (!reader.PopString(&app_id_or_url) ||
-      !reader.PopUint32(&launcher_pid) ||
-      !reader.PopBool(&fullscreen) ||
-      !reader.PopBool(&remote_debugging)) {
+  if (!reader.PopString(app_id_or_url) ||
+      !reader.PopUint32(launcher_pid) ||
+      !reader.PopBool(fullscreen) ||
+      !reader.PopBool(remote_debugging) ||
+      !reader.PopString(encoded_bundle)) {
     scoped_ptr<dbus::Response> response =
         CreateError(method_call,
                     "Error parsing message. Missing arguments.");
-    response_sender.Run(response.Pass());
-    return;
+    response_sender->Run(response.Pass());
+    return false;
   }
+  return true;
+}
 
+void RunningApplicationsManager::OnLaunch(
+    dbus::MethodCall* method_call,
+    dbus::ExportedObject::ResponseSender response_sender) {
+  std::string app_id_or_url;
   Application::LaunchParams params;
+  unsigned int launcher_pid;
+
+  std::string encoded_bundle;
+  if (!ParseLaunchCallArgs(method_call, &response_sender, &app_id_or_url,
+                           &launcher_pid,
+                           &params.force_fullscreen,
+                           &params.remote_debugging,
+                           &encoded_bundle))
+    return;
   params.launcher_pid = launcher_pid;
-  params.force_fullscreen = fullscreen;
-  params.remote_debugging = remote_debugging;
 
   Application* application = NULL;
   GURL url(app_id_or_url);
@@ -196,6 +215,64 @@ void RunningApplicationsManager::OnLaunch(
   response_sender.Run(response.Pass());
 }
 
+#if defined(OS_TIZEN)
+void RunningApplicationsManager::OnLaunchAppControl(
+    dbus::MethodCall* method_call,
+    dbus::ExportedObject::ResponseSender response_sender) {
+  fprintf(stderr, "AppControl launch\n\n");
+
+  std::string app_id_or_url;
+  // We might want to pass key-value pairs if have more parameters in future.
+  unsigned int launcher_pid;
+  bool fullscreen;
+  bool remote_debugging;
+  std::string encoded_bundle;
+
+  if (!ParseLaunchCallArgs(method_call, &response_sender, &app_id_or_url,
+          &launcher_pid, &fullscreen, &remote_debugging, &encoded_bundle))
+    return;
+
+  Application::LaunchParams params;
+  params.launcher_pid = launcher_pid;
+  params.force_fullscreen = fullscreen;
+  params.remote_debugging = remote_debugging;
+
+  Application* application = NULL;
+  GURL url(app_id_or_url);
+  if (!url.spec().empty())
+    application = application_service_->LaunchHostedURL(url, params);
+  if (!application)
+    application = ToApplicationServiceTizen(
+        application_service_)->LaunchFromAppID(app_id_or_url, params);
+
+  if (!application) {
+    scoped_ptr<dbus::Response> response =
+        CreateError(method_call,
+                    "Error launching application with id or url"
+                    + app_id_or_url);
+    response_sender.Run(response.Pass());
+    return;
+  }
+
+  // Save encoded bundle
+  RunningApplicationObject* app_obj = GetRunningApp(app_id_or_url);
+  app_obj->SaveEncodedBundle(encoded_bundle);
+
+  // FIXME(cmarcelo): ApplicationService will tell us when new applications
+  // appear (with DidLaunchApplication()) and we create new managed objects
+  // in D-Bus based on that.
+  dbus::ObjectPath path =
+      AddObject(GetAppObjectPathFromAppId(application->id()),
+                method_call->GetSender(),
+                application);
+  scoped_ptr<dbus::Response> response =
+      dbus::Response::FromMethodCall(method_call);
+  dbus::MessageWriter writer(response.get());
+  writer.AppendObjectPath(path);
+  response_sender.Run(response.Pass());
+}
+#endif
+
 void RunningApplicationsManager::OnTerminateIfRunning(
     dbus::MethodCall* method_call,
     dbus::ExportedObject::ResponseSender response_sender) {
@@ -211,7 +288,8 @@ void RunningApplicationsManager::OnTerminateIfRunning(
     return;
   }
 
-  if (Application* app = application_service_->GetApplicationByID(app_id)) {
+  Application* app = application_service_->GetApplicationByID(app_id);
+  if (app) {
     CHECK(app_id == app->id());
     app->Terminate();
   }

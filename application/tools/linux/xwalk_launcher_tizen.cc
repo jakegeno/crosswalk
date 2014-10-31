@@ -5,6 +5,8 @@
 
 #include "xwalk/application/tools/linux/xwalk_launcher_tizen.h"
 
+#include <appsvc.h>
+#include <bundle.h>
 #include <unistd.h>
 #include <pkgmgr-info.h>
 #include <stdio.h>
@@ -88,10 +90,38 @@ bool XWalkLauncherTizen::Resume() {
   return dbus_object_manager_->Resume();
 }
 
+int XWalkLauncherTizen::LaunchAppControl(char* encoded_bundle) {
+  if (!encoded_bundle)
+    encoded_bundle = "";
+  LaunchApplication(encoded_bundle);
+}
+
+bool XWalkLauncherTizen::IsAppControlLaunch(const char* operation,
+    const char* mime, const char* uri) {
+  if (operation != nullptr || mime != nullptr || uri != nullptr)
+    return true;
+  return false;
+}
+
+void XWalkLauncherTizen::ParseBundleData(bundle* b, char** out_operation,
+    char** out_mime, char** out_uri) {
+  *out_operation = const_cast<char*>(appsvc_get_operation(b));
+  *out_mime = const_cast<char*>(appsvc_get_mime(b));
+  *out_uri = const_cast<char*>(appsvc_get_uri(b));
+}
+
+void XWalkLauncherTizen::EncodeBundle(bundle* b, bundle_raw** out_bundle,
+                                      int* len) {
+  bundle_encode(b, out_bundle, len);
+}
+
 void XWalkLauncherTizen::application_event_cb(app_event event,
                                               void* data, bundle* b) {
   XWalkLauncherTizen* xwalk_launcher = static_cast<XWalkLauncherTizen*>(data);
   LOG(INFO) << "event '" << Event2Str(event) << "'";
+
+  bundle_raw* encoded_bundle;
+  int len;
 
   switch (event) {
     case AE_UNKNOWN:
@@ -109,8 +139,16 @@ void XWalkLauncherTizen::application_event_cb(app_event event,
         LOG(ERROR) << "Resuming application failed";
       break;
     case AE_RESET:
-      if (!xwalk_launcher->LaunchApplication())
-        xwalk_launcher->main_loop_->QuitNow();
+      xwalk_launcher->ParseBundleData(b, &xwalk_launcher->operation,
+              &xwalk_launcher->mime, &xwalk_launcher->uri);
+      if (xwalk_launcher->IsAppControlLaunch(xwalk_launcher->operation,
+          xwalk_launcher->mime, xwalk_launcher->uri)) {
+        xwalk_launcher->EncodeBundle(b, &encoded_bundle, &len);
+        xwalk_launcher->LaunchAppControl(reinterpret_cast<char*>(encoded_bundle));
+      } else {
+        if (!xwalk_launcher->LaunchApplication())
+          xwalk_launcher->main_loop_->QuitNow();
+      }
       break;
     case AE_LOWMEM_POST:
     case AE_MEM_FLUSH:

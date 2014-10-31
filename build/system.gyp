@@ -79,6 +79,8 @@
           'variables': {
             'packages': [
               'ail',
+              'appsvc',
+              'bundle',
               'dlog',
               'nss',
               'nspr',
