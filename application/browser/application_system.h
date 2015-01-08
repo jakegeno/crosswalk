@@ -65,12 +65,13 @@ class ApplicationSystem {
   void CreateExtensions(content::RenderProcessHost* host,
                         extensions::XWalkExtensionVector* extensions);
 
+  scoped_ptr<ApplicationService> application_service_;
+
  protected:
   explicit ApplicationSystem(XWalkBrowserContext* browser_context);
 
   // Note: initialization order matters.
   XWalkBrowserContext* browser_context_;
-  scoped_ptr<ApplicationService> application_service_;
 
   DISALLOW_COPY_AND_ASSIGN(ApplicationSystem);
 };

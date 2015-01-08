@@ -9,6 +9,7 @@
       'tizen%': '<(tizen)',
       'tizen_mobile%': '<(tizen_mobile)',
       'enable_murphy%': '<(enable_murphy)',
+      'use_glib': 1,
     },
     'conditions': [
       ['tizen==1', {
